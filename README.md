@@ -15,11 +15,11 @@ When Command Object executes, it call real object to take action.
 - Handle some error coordinates from input like -1,-1 ....
 
 ### The input file will look like that
-DIMENSION 200
-MOVE_TO 1,1
-LINE_TO 3,3
-LINE_TO 2,3
-MOVE_TO 90,90
-CIRCLE_TO 20,30
-PRINT CONSOLE
-PRINT BITMAP
+DIMENSION 200<br>
+MOVE_TO 1,1<br>
+LINE_TO 3,3<br>
+LINE_TO 2,3<br>
+MOVE_TO 90,90<br>
+CIRCLE_TO 20,30<br>
+PRINT CONSOLE<br>
+PRINT BITMAP<br>
