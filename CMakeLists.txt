@@ -8,16 +8,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 add_compile_definitions(STBI_WRITE_NO_STDIO)
 
 add_executable(HomeTestRobotic main.cpp
-    stb_image_write.h
-    Application.h Application.cpp
-    Command.h
-    MoveToCommand.h MoveToCommand.cpp
-    LineToCommand.h LineToCommand.cpp
-    GridMap.h GridMap.cpp
-    CircleToCommand.h CircleToCommand.cpp
-    MapPrinter.h
-    ConsolePrinter.h ConsolePrinter.cpp
-    BitmapPrinter.h BitmapPrinter.cpp)
+    RobotMovement.h RobotMovement.cpp)
 
 include(GNUInstallDirs)
 install(TARGETS HomeTestRobotic

@@ -1,25 +1,49 @@
-#include <iostream>
-#include <fstream>
-#include "Application.h"
+#include "RobotMovement.h"
+#define SIZE_MOVE_TO 7
+#define SIZE_LINE_TO 7
+#define SIZE_CIRCLE_TO 9
+
 
 int main(int argc, char * argv[]) {
-    Application app;
-    std::ifstream file("input.txt");  // Open file
 
+    if(argc < 2){
+        std::cout<<"Please add input path file\n";
+        return 1;
+    }
+    std::string fileName(argv[1]);
+    std::cout<<"fileName: "<<fileName;
+    std::ifstream file(fileName);  // Open file
     std::string line;
-    std::vector<std::string> commandList;
+    RobotMovement robotMovement;
     while (std::getline(file, line)) {  // Read file line-by-line
         std::cout << line << std::endl;  // Output each line
         if(int index = line.find("DIMENSION"); index != std::string::npos){
-            app.createMap(std::stoi(line.substr(index + 9)));
+            robotMovement.create(std::stoi(line.substr(index + 9)));
         }
         else{
-            commandList.push_back(line);
+            if(int index = line.find("MOVE_TO"); index != std::string::npos){
+                if(int commaIndex = line.find(","); commaIndex != std::string::npos){
+                    Point p(std::stoi(line.substr(commaIndex+1)), std::stoi(line.substr(index+SIZE_MOVE_TO+1, commaIndex - (index+SIZE_MOVE_TO+1))));
+                    robotMovement.doAction(CommandType::MOVE, p);
+                }
+            }
+            else if(int index = line.find("LINE_TO"); index != std::string::npos){
+                if(int commaIndex = line.find(","); commaIndex != std::string::npos){
+                    Point p(std::stoi(line.substr(commaIndex+1)), std::stoi(line.substr(index+SIZE_LINE_TO+1, commaIndex - (index+SIZE_LINE_TO+1))));
+                    robotMovement.doAction(CommandType::LINE, p);
+                }
+            }
+            else if(int index = line.find("CIRCLE_TO"); index != std::string::npos){
+                if(int commaIndex = line.find(","); commaIndex != std::string::npos){
+                    Point p(std::stoi(line.substr(commaIndex+1)), std::stoi(line.substr(index+SIZE_CIRCLE_TO+1, commaIndex - (index+SIZE_CIRCLE_TO+1))));
+                    robotMovement.doAction(CommandType::CIRCLE, p);
+                }
+            }
         }
     }
     file.close();
-    app.readCommands(commandList);
-    app.exec();
+    robotMovement.displayDataConsole();
+    robotMovement.displayDataBitmap();
 
     return 0;
 }
