@@ -1,18 +1,12 @@
 #include "RobotMovement.h"
 #include <math.h>
-RobotMovement::RobotMovement()
- : isCreatedSuccess_(false)
-{
-
-}
+RobotMovement::RobotMovement() {}
 
 RobotMovement::RobotMovement(int dimension)
-    : dimension_(dimension), isCreatedSuccess_(false)
+    : dimension_(dimension)
 {
-    // asume that dimention should be greater than 0 and less than 200
     if(dimension_ <= 0 || dimension_ > 200) return;
     robotMap_ = std::vector<bool>(dimension_*dimension_, false);
-    isCreatedSuccess_ = true;
 }
 
 void RobotMovement::create(int dimension)
@@ -20,29 +14,22 @@ void RobotMovement::create(int dimension)
     dimension_ = dimension;
     if(dimension_ <= 0 || dimension_ > 200) return;
     robotMap_ = std::vector<bool>(dimension_*dimension_, false);
-    isCreatedSuccess_ = true;
 }
 
-void RobotMovement::doAction(CommandType commandType, const Point& p)
+void RobotMovement::doAction(const std::string& action, const Point& p)
 {
-    switch (commandType) {
-    case CommandType::MOVE:
-        this->moveToPoint(p);
-        break;
-    case CommandType::LINE:
-        this->lineToPoint(p);
-        break;
-    case CommandType::CIRCLE:
-        this->circleToPoint(p);
-        break;
-    default:
-        break;
+    if(actions_.find(action) != actions_.end() && actions_[action] != nullptr){
+        actions_[action]->execute(robotPos_, robotMap_, dimension_, p);
+    }
+    else{
+        actions_[action] = createAction(action);
+        if(actions_[action]) actions_[action]->execute(robotPos_, robotMap_, dimension_, p);
     }
 }
 
 void RobotMovement::displayDataConsole()
 {
-    if(!isCreatedSuccess_) return;
+    if(robotMap_.size() == 0) return;
     for (int i = 0; i < dimension_; i++) {
         for (int j = 0; j < dimension_; j++) {
             std::cout << "+---";
@@ -63,7 +50,7 @@ void RobotMovement::displayDataConsole()
 
 void RobotMovement::displayDataBitmap()
 {
-    if(!isCreatedSuccess_) return;
+    if(robotMap_.size() == 0) return;
     std::vector<RGB> bitmap(dimension_*dimension_, {255, 255, 255});
     RGB circleColor = {0, 0, 255};
     for(int i = 0; i < robotMap_.size(); i++){
@@ -72,101 +59,6 @@ void RobotMovement::displayDataBitmap()
         }
     }
     saveBitmap(bitmap, "output_bitmap.bmp");
-}
-
-void RobotMovement::moveToPoint(const Point& p)
-{
-    std::cout<<"GridMap::moveToPoint"<<std::endl;
-    if(!checkPointValid(p) || !isCreatedSuccess_) return;
-    // move to p
-    robotPos_ = p;
-    robotMap_[p.y * dimension_ + p.x] = true; // mark this point as visited
-}
-
-void RobotMovement::lineToPoint(const Point& p)
-{
-    std::cout<<"GridMap::lineToPoint"<<std::endl;
-    if(!checkPointValid(p) || !isCreatedSuccess_) return;
-    // using A* algorithm to find path from robotPos to point P
-
-    // choose the next point to step in is the point that
-    // distance euclid from it to target is smallest
-    while (robotPos_ != p) {
-        auto neighborPoint = findneighborPoints(robotPos_);
-        if(neighborPoint.size() == 0){
-            std::cout<<"neighborPoint empty"<<std::endl;
-            return;
-        }
-        Point choosedPoint = neighborPoint[0];
-        for(int i = 1; i < neighborPoint.size(); i++){
-            if(squareDistanceOf2Point(choosedPoint, p) > squareDistanceOf2Point(neighborPoint[i], p)){
-                choosedPoint = neighborPoint[i];
-            }
-        }
-        robotPos_ = choosedPoint;
-        robotMap_[robotPos_.y * dimension_ + robotPos_.x] = true;
-    }
-}
-
-void RobotMovement::circleToPoint(const Point& p)
-{
-    std::cout<<"GridMap::circleToPoint"<<std::endl;
-    if(!checkPointValid(p) || !isCreatedSuccess_) return;
-    int radius = std::sqrt(((p.x-robotPos_.x)*(p.x - robotPos_.x) + (p.y-robotPos_.y)*(p.y - robotPos_.y)));
-    std::cout<<"radius: "<<radius<<std::endl;
-    int x = radius, y = 0;
-    int decisionOver2 = 1 - x;
-    while (x >= y) {
-        // Plot the circle points in each octant
-        setPixel(robotPos_.x + x, robotPos_.y + y);
-        setPixel(robotPos_.x + y, robotPos_.y + x);
-        setPixel(robotPos_.x - y, robotPos_.y + x);
-        setPixel(robotPos_.x - x, robotPos_.y + y);
-        setPixel(robotPos_.x - x, robotPos_.y - y);
-        setPixel(robotPos_.x - y, robotPos_.y - x);
-        setPixel(robotPos_.x + y, robotPos_.y - x);
-        setPixel(robotPos_.x + x, robotPos_.y - y);
-        y++;
-
-        if (decisionOver2 <= 0) {
-            decisionOver2 += 2 * y + 1;
-        } else {
-            x--;
-            decisionOver2 += 2 * (y - x) + 1;
-        }
-    }
-}
-
-bool RobotMovement::checkPointValid(Point p)
-{
-    if(p.x < 0 || p.x >= dimension_ || p.y < 0 || p.y >= dimension_) return false;
-    else return true;
-}
-
-int RobotMovement::squareDistanceOf2Point(Point p1, Point p2)
-{
-    return (p2.x-p1.x)*(p2.x-p1.x) + (p2.y-p1.y)*(p2.y-p1.y);
-}
-
-std::vector<Point> RobotMovement::findneighborPoints(Point p)
-{
-    std::vector<Point> res;
-    if(checkPointValid(Point(p.x-1, p.y-1))) res.push_back(Point(p.x-1, p.y-1));
-    if(checkPointValid(Point(p.x, p.y-1))) res.push_back(Point(p.x, p.y-1));
-    if(checkPointValid(Point(p.x+1, p.y-1))) res.push_back(Point(p.x+1, p.y-1));
-    if(checkPointValid(Point(p.x-1, p.y))) res.push_back(Point(p.x-1, p.y));
-    if(checkPointValid(Point(p.x+1, p.y))) res.push_back(Point(p.x+1, p.y));
-    if(checkPointValid(Point(p.x-1, p.y+1))) res.push_back(Point(p.x-1, p.y+1));
-    if(checkPointValid(Point(p.x, p.y+1))) res.push_back(Point(p.x, p.y+1));
-    if(checkPointValid(Point(p.x+1, p.y+1))) res.push_back(Point(p.x+1, p.y+1));
-    return res;
-}
-
-void RobotMovement::setPixel(int x, int y)
-{
-    if (x >= 0 && x < dimension_ && y >= 0 && y < dimension_) {
-        robotMap_[y * dimension_ + x] = true;
-    }
 }
 
 void RobotMovement::saveBitmap(const std::vector<RGB> &bitmap, const std::string &filename)
@@ -216,4 +108,101 @@ void RobotMovement::saveBitmap(const std::vector<RGB> &bitmap, const std::string
     }
 
     file.close();
+}
+
+void MoveToAction::execute(Point &currPos, std::vector<bool> &grid, int dim, const Point &targetPos)
+{
+    std::cout<<"MoveToAction::execute"<<std::endl;
+    if(grid.size() == 0) return;
+    if(targetPos.x < 0 || targetPos.y < 0 || ((targetPos.y*dim + targetPos.x) >= grid.size())) return;
+    // move to p
+    currPos = targetPos;
+    grid[targetPos.y * dim + targetPos.x] = true; // mark this point as visited
+}
+
+void LineToAction::execute(Point &currPos, std::vector<bool> &grid, int dim, const Point &targetPos)
+{
+    std::cout<<"LineToAction::execute"<<std::endl;
+    if(grid.size() == 0) return;
+    if(targetPos.x < 0 || targetPos.y < 0 || ((targetPos.y*dim + targetPos.x) >= grid.size())) return;
+    // using A* algorithm to find path from robotPos to point P
+
+    // choose the next point to step in is the point that
+    // distance euclid from it to target is smallest
+    while (currPos != targetPos) {
+        auto neighborPoint = findneighborPoints(currPos, dim);
+        if(neighborPoint.size() == 0){
+            std::cout<<"neighborPoint empty"<<std::endl;
+            return;
+        }
+        Point choosedPoint = neighborPoint[0];
+        for(int i = 1; i < neighborPoint.size(); i++){
+            if(squareDistanceOf2Point(choosedPoint, targetPos) > squareDistanceOf2Point(neighborPoint[i], targetPos)){
+                choosedPoint = neighborPoint[i];
+            }
+        }
+        currPos = choosedPoint;
+        grid[currPos.y * dim + currPos.x] = true;
+    }
+}
+
+int LineToAction::squareDistanceOf2Point(const Point& p1, const Point& p2)
+{
+    return (p2.x-p1.x)*(p2.x-p1.x) + (p2.y-p1.y)*(p2.y-p1.y);
+}
+
+std::vector<Point> LineToAction::findneighborPoints(const Point& p, int dim)
+{
+    std::vector<Point> res;
+    if(checkPointValid(Point(p.x-1, p.y-1),dim)) res.push_back(Point(p.x-1, p.y-1));
+    if(checkPointValid(Point(p.x, p.y-1),dim)) res.push_back(Point(p.x, p.y-1));
+    if(checkPointValid(Point(p.x+1, p.y-1),dim)) res.push_back(Point(p.x+1, p.y-1));
+    if(checkPointValid(Point(p.x-1, p.y),dim)) res.push_back(Point(p.x-1, p.y));
+    if(checkPointValid(Point(p.x+1, p.y),dim)) res.push_back(Point(p.x+1, p.y));
+    if(checkPointValid(Point(p.x-1, p.y+1),dim)) res.push_back(Point(p.x-1, p.y+1));
+    if(checkPointValid(Point(p.x, p.y+1),dim)) res.push_back(Point(p.x, p.y+1));
+    if(checkPointValid(Point(p.x+1, p.y+1),dim)) res.push_back(Point(p.x+1, p.y+1));
+    return res;
+}
+
+bool LineToAction::checkPointValid(const Point &p, int dim)
+{
+    if(p.x < 0 || p.x >= dim || p.y < 0 || p.y >= dim) return false;
+    else return true;
+}
+
+void CircleToAction::execute(Point &currPos, std::vector<bool> &grid, int dim, const Point &targetPos)
+{
+    std::cout<<"CircleToAction::execute"<<std::endl;
+    if(grid.size() == 0) return;
+    if(targetPos.x < 0 || targetPos.y < 0 || ((targetPos.y*dim + targetPos.x) >= grid.size())) return;
+    int radius = std::sqrt(((targetPos.x-currPos.x)*(targetPos.x - currPos.x) + (targetPos.y-currPos.y)*(targetPos.y - currPos.y)));
+    std::cout<<"radius: "<<radius<<std::endl;
+    int x = radius, y = 0;
+    int decisionOver2 = 1 - x;
+    while (x >= y) {
+        // Plot the circle points in each octant
+        setPixel(currPos.x + x, currPos.y + y, dim, grid);
+        setPixel(currPos.x + y, currPos.y + x, dim, grid);
+        setPixel(currPos.x - y, currPos.y + x, dim, grid);
+        setPixel(currPos.x - x, currPos.y + y, dim, grid);
+        setPixel(currPos.x - x, currPos.y - y, dim, grid);
+        setPixel(currPos.x - y, currPos.y - x, dim, grid);
+        setPixel(currPos.x + y, currPos.y - x, dim, grid);
+        setPixel(currPos.x + x, currPos.y - y, dim, grid);
+        y++;
+        if (decisionOver2 <= 0) {
+            decisionOver2 += 2 * y + 1;
+        } else {
+            x--;
+            decisionOver2 += 2 * (y - x) + 1;
+        }
+    }
+}
+
+void CircleToAction::setPixel(int x, int y, int dim, std::vector<bool>& grid)
+{
+    if (x >= 0 && x < dim && y >= 0 && y < dim) {
+        grid[y * dim + x] = true;
+    }
 }

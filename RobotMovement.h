@@ -4,6 +4,8 @@
 #include <iostream>
 #include <fstream>
 #include <cmath>
+#include <map>
+#include <memory>
 struct Point {
     int x{0};
     int y{0};
@@ -27,11 +29,38 @@ struct Point {
     }
 };
 
-enum class CommandType: unsigned char{
-    MOVE = 0,
-    LINE,
-    CIRCLE
+class Action{
+public:
+    virtual void execute(Point& currPos, std::vector<bool>& grid, int dim, const Point& targetPos) = 0;
 };
+
+class MoveToAction : public Action{
+public:
+    void execute(Point& currPos, std::vector<bool>& grid, int dim, const Point& targetPos) override;
+};
+
+class LineToAction : public Action{
+public:
+    void execute(Point& currPos, std::vector<bool>& grid, int dim, const Point& targetPos) override;
+private:
+    int squareDistanceOf2Point(const Point& p1, const Point& p2);
+    std::vector<Point> findneighborPoints(const Point& p, int dim);
+    bool checkPointValid(const Point& p, int dim);
+};
+
+class CircleToAction : public Action{
+public:
+    void execute(Point& currPos, std::vector<bool>& grid, int dim, const Point& targetPos) override;
+private:
+    void setPixel(int x, int y, int dim, std::vector<bool>& grid);
+};
+
+static std::unique_ptr<Action> createAction(const std::string& action){
+    if(action == "MOVE_TO") return std::make_unique<MoveToAction>();
+    else if(action == "LINE_TO") return std::make_unique<LineToAction>();
+    else if(action == "CIRCLE_TO") return std::make_unique<CircleToAction>();
+    else return nullptr;
+}
 
 class RobotMovement
 {
@@ -43,23 +72,16 @@ public:
     RobotMovement();
     RobotMovement(int dimension);
     void create(int dimension);
-    void doAction(CommandType commandType, const Point& p);
+    void doAction(const std::string& action, const Point& p);
     void displayDataConsole();
     void displayDataBitmap();
 private:
-    void moveToPoint(const Point& p);
-    void lineToPoint(const Point& p);
-    void circleToPoint(const Point& p);
-    bool checkPointValid(Point p);
-    int squareDistanceOf2Point(Point p1, Point p2);
-    std::vector<Point> findneighborPoints(Point p);
-    void setPixel(int x, int y);
     void saveBitmap(const std::vector<RGB>& bitmap, const std::string& filename);
 private:
     std::vector<bool> robotMap_;
     int dimension_;
     Point robotPos_;
-    bool isCreatedSuccess_;
+    std::map<std::string, std::unique_ptr<Action>> actions_;
 };
 
 #endif // ROBOTMOVEMENT_H
